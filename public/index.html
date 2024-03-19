@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: black;
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      flex-flow: row nowrap;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      flex-grow: 1;
+      max-width: calc(100vh * 320/240);
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body>
+  <canvas width="320" height="240"></canvas>
+  <script src="index.js" type="module"></script>
+</body>
+</html>
