@@ -1,15 +1,20 @@
 import {
-  Tile,
-  TILE_MURPHY,
   TILE_SPACE,
-  MURPHY_COMES_FROM_RIGHT,
+  TILE_MURPHY,
+  Tiles,
+  TILE_BASE,
   MURPHY_COMES_FROM_LEFT,
-  MURPHY_COMES_FROM_TOP,
-  MURPHY_COMES_FROM_BOTTOM,
-  MURPHY_GOES_DOWN,
+  MURPHY_COMES_FROM_TOP_L,
+  MURPHY_GOES_UP_L,
+  MURPHY_GOES_UP_R,
+  MURPHY_COMES_FROM_BOTTOM_L,
+  MURPHY_GOES_DOWN_L,
+  MURPHY_GOES_DOWN_R,
   MURPHY_GOES_LEFT,
+  MURPHY_COMES_FROM_RIGHT,
   MURPHY_GOES_RIGHT,
-  MURPHY_GOES_UP,
+  MURPHY_LOOKS_LEFT,
+  MURPHY_LOOKS_RIGHT,
 } from "./tile.js";
 import {
   LVL_HEIGHT,
@@ -20,33 +25,31 @@ import {
   UP,
   DOWN,
   LEFT,
+  RIGHT,
   NONE,
-  LVL_BORDER_WIDTH,
   TILE_SIZE,
+  LVL_BORDER_WIDTH,
 } from "./const.js";
-import {
-  clamp,
-  getEmptyLevel,
-  getLevelTiles,
-  loadImage,
-  nextFrame,
-  readFile,
-  readFileText,
-} from "./utils.js";
+import { clamp, getEmptyLevel, loadImage, readFileText } from "./utils.js";
 import { Webgl2D } from "./webgl2d.js";
 
 async function main() {
   const canvas = document.querySelector("canvas");
   const gl = canvas.getContext("webgl");
   const fixedPng = await loadImage("img/fixed.png");
+  const movingPng = await loadImage("img/moving.png");
   const panelPng = await loadImage("img/panel.png");
-  const fragmentShader = await readFileText("glsl/fixedLevel.glsl");
+  const fragmentShader = await readFileText("glsl/level.glsl");
 
   const fixedTilesProgram = new Webgl2D(gl, fragmentShader, {
     ...constForGlsl,
     uFixedTilesTexture: {
       type: "sampler2D",
       value: fixedPng,
+    },
+    uAnimationFramesTexture: {
+      type: "sampler2D",
+      value: movingPng,
     },
     uPanelTexture: {
       type: "sampler2D",
@@ -60,6 +63,10 @@ async function main() {
       type: "vec2",
       value: [fixedPng.width, fixedPng.height],
     },
+    uAnimationFramesTextureSize: {
+      type: "vec2",
+      value: [movingPng.width, movingPng.height],
+    },
     uLevelTiles: {
       type: "sampler2D",
     },
@@ -72,165 +79,174 @@ async function main() {
     },
   });
 
+  let tiles = new Tiles(getEmptyLevel());
   const levelState = {
-    tiles: getEmptyLevel(), // getLevelTiles(await readFile("data/LEVELS.DAT"), 108),
+    tiles,
+    murphy: {
+      tile: tiles.getMurphy(),
+      looksLeft: true,
+      resetFrameTimeout: null,
+    },
     screenTop: 0,
     screenLeft: 0,
-    keyboard: {
-      lastHorzDirection: LEFT,
-      direction: NONE,
-      space: false,
+    kbd: {
+      ArrowUp: false,
+      ArrowDown: false,
+      ArrowLeft: false,
+      ArrowRight: false,
+      Space: false,
     },
   };
+  window.levelState = levelState;
 
+  canvas.focus();
   window.addEventListener("keydown", function (event) {
-    switch (event.code) {
-      case "Space":
-        levelState.keyboard.space = true;
-        break;
-
-      case "ArrowUp":
-        levelState.keyboard.direction = UP;
-        break;
-
-      case "ArrowDown":
-        levelState.keyboard.direction = DOWN;
-        break;
-
-      case "ArrowLeft":
-        levelState.keyboard.lastHorzDirection = LEFT;
-        levelState.keyboard.direction = LEFT;
-        break;
-
-      case "ArrowRight":
-        levelState.keyboard.lastHorzDirection = LEFT;
-        levelState.keyboard.direction = RIGHT;
-        break;
-    }
+    if (event.code in levelState.kbd) levelState.kbd[event.code] = true;
   });
-
   window.addEventListener("keyup", function (event) {
-    switch (event.code) {
-      case "Space":
-        levelState.keyboard.space = false;
-        break;
-
-      case "ArrowUp":
-      case "ArrowDown":
-      case "ArrowLeft":
-      case "ArrowRight":
-        levelState.keyboard.direction = NONE;
-        break;
-    }
+    if (event.code in levelState.kbd) levelState.kbd[event.code] = false;
   });
 
   function drawLevel() {
     fixedTilesProgram.draw({
       uLevelTiles: {
-        data: levelState.tiles,
+        data: levelState.tiles.webglTileState,
         type: gl.UNSIGNED_BYTE,
         width: LVL_WIDTH,
         height: LVL_HEIGHT,
-        format: gl.LUMINANCE_ALPHA,
+        format: gl.RGB,
       },
       uLevelOffset: [levelState.screenLeft, levelState.screenTop],
     });
   }
   drawLevel();
 
-  // canvas.addEventListener("mousemove", function (event) {
-  //   let canvasPos = event.target.getBoundingClientRect(),
-  //     x = (event.clientX - canvasPos.x) / canvasPos.width,
-  //     y = (event.clientY - canvasPos.y) / canvasPos.height,
-  //     windowWidth = canvas.width,
-  //     windowHeight = canvas.height - panelPng.height;
-
-  //   levelState.screenLeft = (LVL_WIDTH_PX - windowWidth) * x;
-  //   levelState.screenTop = (LVL_HEIGHT_PX - windowHeight) * y;
-  //   drawLevel();
-  // });
-
-  window.requestAnimationFrame(theLoop);
-  var timeStart = performance.now();
+  var timeBefore = performance.now();
   const frameLength = 35; //ms
-  var prevFrame = 0;
   function theLoop(timeNow) {
-    const thisFrame = Math.round((timeNow - timeStart) / frameLength);
-    if (thisFrame == prevFrame) return;
-    for (let y = 0; y < LVL_HEIGHT; y++) {
-      for (let x = 0; x < LVL_WIDTH; x++) {
-        let thisTile = Tile.read(levelState.tiles, x, y);
-        let topTile = Tile.read(levelState.tiles, x, y - 1);
-        let leftTile = Tile.read(levelState.tiles, x - 1, y);
-        // If animation is going, just continue it
-        if (isAnimating(thisTile)) {
-          continueAnimation(thisTile, thisFrame - prevFrame);
-        }
-        // Should we start a new animation on the current tile?
-        else {
-          // Should we start to move Murphy?
-          if (
-            thisTile.type == TILE_MURPHY &&
-            levelState.keyboard.direction != NONE
-          ) {
-            switch (levelState.keyboard.direction) {
-              case LEFT:
-                if (x > 0) {
-                  startAnimation(thisTile, MURPHY_GOES_LEFT);
-                  startAnimation(leftTile, MURPHY_COMES_FROM_RIGHT);
+    const framesNum = Math.round((timeNow - timeBefore) / frameLength);
+    if (framesNum > 0) {
+      levelState.tiles.needRedraw = false;
+      for (let y = 0; y < LVL_HEIGHT; y++) {
+        for (let x = 0; x < LVL_WIDTH; x++) {
+          let thisTile = levelState.tiles.get(x, y);
+          let leftTile = x > 0 ? levelState.tiles.get(x - 1, y) : null;
+          let topTile = y > 0 ? levelState.tiles.get(x, y - 1) : null;
+          let R = levelState.murphy.looksLeft ? 0 : 1;
+
+          switch (thisTile.type) {
+            case TILE_MURPHY:
+              if (thisTile.isAnimating()) {
+                thisTile.continueAnimation(framesNum);
+                if (thisTile.isAnimationEnded()) {
+                  // For now all animations are moving animations
+                  thisTile.type = TILE_SPACE; // Animation ended - Murphy is gone
                 }
-                break;
-              case RIGHT:
-                if (LVL_WIDTH - x > 1) {
-                  startAnimation(thisTile, MURPHY_GOES_RIGHT);
-                  // Right tile will be processed later
+              } else if (thisTile == levelState.murphy.tile) {
+                if (levelState.kbd.ArrowUp && y > 0) {
+                  thisTile.startAnimation(MURPHY_GOES_UP_L + R);
+                  if (topTile.type == TILE_SPACE || topTile.type == TILE_BASE) {
+                    topTile.startAnimation(MURPHY_COMES_FROM_BOTTOM_L + R);
+                  }
+                } else if (levelState.kbd.ArrowDown && y < LVL_HEIGHT - 1) {
+                  thisTile.startAnimation(MURPHY_GOES_DOWN_L + R);
+                } else if (levelState.kbd.ArrowLeft && x > 0) {
+                  thisTile.startAnimation(MURPHY_GOES_LEFT);
+                  levelState.murphy.looksLeft = true;
+                  R = 0;
+                  if (
+                    leftTile.type == TILE_SPACE ||
+                    leftTile.type == TILE_BASE
+                  ) {
+                    leftTile.startAnimation(MURPHY_COMES_FROM_RIGHT);
+                  }
+                } else if (levelState.kbd.ArrowRight && x < LVL_WIDTH - 1) {
+                  thisTile.startAnimation(MURPHY_GOES_RIGHT);
+                  levelState.murphy.looksLeft = false;
+                  R = 1;
                 }
-                break;
-              case UP:
-                if (y > 0) {
-                  startAnimation(thisTile, MURPHY_GOES_UP);
-                  startAnimation(topTile, MURPHY_COMES_FROM_BOTTOM);
+                if (
+                  thisTile.isAnimating() &&
+                  levelState.murphy.resetFrameTimeout
+                ) {
+                  clearTimeout(levelState.murphy.resetFrameTimeout);
+                  levelState.murphy.resetFrameTimeout = null;
                 }
-                break;
-              case DOWN:
-                if (LVL_HEIGHT - y > 1) {
-                  startAnimation(thisTile, MURPHY_GOES_DOWN);
-                  // Bottom tile will be processed later
+              }
+              break;
+
+            case TILE_SPACE:
+            case TILE_BASE:
+              if (thisTile.isAnimating()) {
+                thisTile.continueAnimation(framesNum);
+                if (thisTile.isAnimationEnded()) {
+                  // For now all animations are moving animations
+                  thisTile.type = TILE_MURPHY; // Animation ended - Murphy arrived here
+                  thisTile.frame = R ? MURPHY_LOOKS_RIGHT : MURPHY_LOOKS_LEFT;
+                  levelState.murphy.tile = thisTile;
+                  levelState.murphy.resetFrameTimeout = setTimeout(() => {
+                    thisTile.frame = [0, 0];
+                    drawLevel();
+                  }, 1000);
                 }
-            }
+              } else {
+                if (
+                  topTile?.type == TILE_MURPHY &&
+                  topTile.isAnimating() &&
+                  topTile.getAnimation() == MURPHY_GOES_DOWN_L + R
+                ) {
+                  thisTile.startAnimation(MURPHY_COMES_FROM_TOP_L + R);
+                } else if (
+                  leftTile?.type == TILE_MURPHY &&
+                  leftTile.isAnimating() &&
+                  leftTile.getAnimation() == MURPHY_GOES_RIGHT
+                ) {
+                  thisTile.startAnimation(MURPHY_COMES_FROM_LEFT);
+                }
+              }
+              break;
           }
-          // Should we animate base tile or space tile because of Murhpy coming here?
-          if (thisTile.type == TILE_SPACE || thisTile.type == TILE_BASE) {
-            if (
-              topTile.type == TILE_MURPHY &&
-              getAnimation(topTile) == MURPHY_GOES_DOWN
-            ) {
-              startAnimation(thisTile, MURPHY_COMES_FROM_TOP);
-            } else if (
-              leftTile == TILE_MURPHY &&
-              getAnimation(leftTile) == MURPHY_GOES_RIGHT
-            ) {
-              startAnimation(thisTile, MURPHY_COMES_FROM_LEFT);
-            }
-          }
-        }
-        // Update offset of the screen
-        if (thisTile.type == TILE_MURPHY) {
-          levelState.screenLeft = clamp(
-            LVL_BORDER_WIDTH + (x + 0.5) * TILE_SIZE - canvas.width / 2,
-            0,
-            LVL_WIDTH_PX - canvas.width
-          );
-          levelState.screenTop = clamp(
-            LVL_BORDER_WIDTH +
-              (y + 0.5) * TILE_SIZE -
-              (canvas.height - panelPng.height) / 2,
-            0,
-            LVL_HEIGHT_PX - canvas.height + panelPng.height
-          );
         }
       }
+      if (levelState.tiles.needRedraw) {
+        let murphy = levelState.murphy.tile;
+        let murphyX = murphy.x * TILE_SIZE + TILE_SIZE / 2 + LVL_BORDER_WIDTH; // center of the tile
+        let murphyY = murphy.y * TILE_SIZE + TILE_SIZE / 2 + LVL_BORDER_WIDTH;
+
+        if (murphy.isAnimating()) {
+          let delta = (murphy._animationProgress + 1) * 2;
+          switch (murphy.getAnimation()) {
+            case MURPHY_GOES_RIGHT:
+              murphyX += delta;
+              break;
+            case MURPHY_GOES_LEFT:
+              murphyX -= delta;
+              break;
+            case MURPHY_GOES_DOWN_L:
+            case MURPHY_GOES_DOWN_R:
+              murphyY += delta;
+              break;
+            case MURPHY_GOES_UP_L:
+            case MURPHY_GOES_UP_R:
+              murphyY -= delta;
+              break;
+          }
+        }
+
+        let viewportW = canvas.width;
+        let viewportH = canvas.height - panelPng.height;
+        levelState.screenLeft = Math.round(
+          clamp(murphyX - viewportW / 2, 0, LVL_WIDTH_PX - viewportW)
+        );
+        levelState.screenTop = Math.round(
+          clamp(murphyY - viewportH / 2, 0, LVL_HEIGHT_PX - viewportH)
+        );
+        drawLevel();
+      }
+      timeBefore = timeNow;
     }
+    window.requestAnimationFrame(theLoop);
   }
+  window.requestAnimationFrame(theLoop);
 }
 main();

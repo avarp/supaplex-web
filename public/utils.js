@@ -1,10 +1,5 @@
-import {
-  LVL_HEIGHT,
-  LVL_WIDTH,
-  LVL_DATA_LENGTH,
-  TILE_BASE,
-  TILE_MURPHY,
-} from "./const.js";
+import { LVL_HEIGHT, LVL_WIDTH, LVL_DATA_LENGTH } from "./const.js";
+import { TILE_BASE, TILE_MURPHY } from "./tile.js";
 
 /**
  * Load image
@@ -40,21 +35,6 @@ export async function readFileText(url) {
 }
 
 /**
- * Add frame coordinates
- * @param {Uint8ClampedArray} a
- * @return {Uint8ClampedArray}
- */
-export function addFrameCoordinates(a) {
-  let b = new Uint8ClampedArray(a.length * 3);
-  a.forEach((value, i) => {
-    b[i * 3] = value;
-    b[i * 3 + 1] = 0;
-    b[i * 3 + 2] = 0;
-  });
-  return b;
-}
-
-/**
  * Get tiles of the level
  * @param {Uint8ClampedArray} levelsData
  * @param {number} levelIndex
@@ -72,7 +52,7 @@ export function getLevelTiles(levelsData, levelIndex) {
       end = start + LVL_WIDTH;
     levelData.copyWithin(target, start, end);
   }
-  return addFrameCoordinates(levelData.slice(0, LVL_WIDTH * LVL_HEIGHT));
+  return levelData.slice(0, LVL_WIDTH * LVL_HEIGHT);
 }
 
 /**
@@ -82,7 +62,7 @@ export function getLevelTiles(levelsData, levelIndex) {
 export function getEmptyLevel() {
   let levelData = new Uint8ClampedArray(LVL_WIDTH * LVL_HEIGHT).fill(TILE_BASE);
   levelData[0] = TILE_MURPHY;
-  return addFrameCoordinates(levelData);
+  return levelData;
 }
 
 /**

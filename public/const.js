@@ -6,11 +6,11 @@ export const LVL_DATA_LENGTH = 1536, // bytes
   LVL_WIDTH_PX = LVL_WIDTH * TILE_SIZE + LVL_BORDER_WIDTH * 2,
   LVL_HEIGHT_PX = LVL_HEIGHT * TILE_SIZE + LVL_BORDER_WIDTH * 2,
   // Movings
-  UP = 1,
-  DOWN = 2,
-  LEFT = 3,
-  RIGHT = 4,
-  NONE = 0;
+  UP = 0,
+  DOWN = 1,
+  LEFT = 2,
+  RIGHT = 3,
+  NONE = -1;
 
 export const constForGlsl = {
   LVL_WIDTH: {
