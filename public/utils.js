@@ -1,5 +1,5 @@
 import { LVL_HEIGHT, LVL_WIDTH, LVL_DATA_LENGTH } from "./const.js";
-import { TILE_BASE, TILE_MURPHY } from "./tile.js";
+import { TILE_BASE, TILE_MURPHY } from "./tiles/const.js";
 
 /**
  * Load image
@@ -77,3 +77,36 @@ export function clamp(value, min, max) {
   if (value > max) return max;
   return value;
 }
+
+/**
+ * Delayed functions scheduler
+ */
+export const schedule = {
+  _timeouts: new Map(),
+  /**
+   * Schedule a function
+   * @param {Function} fn
+   * @param {number} delay
+   * @void
+   */
+  add(fn, delay = 0) {
+    this.cancel(fn);
+    this._timeouts.set(
+      fn,
+      setTimeout(() => {
+        fn();
+        this._timeouts.delete(fn);
+      }, delay)
+    );
+  },
+  /**
+   * Cancel a function execution
+   * @param {Function} fn
+   * @void
+   */
+  cancel(fn) {
+    if (this._timeouts.has(fn)) {
+      clearTimeout(this._timeouts.get(fn));
+    }
+  },
+};

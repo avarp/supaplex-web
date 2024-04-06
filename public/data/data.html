@@ -1,142 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-  <style>
-    body {
-      background-color: black;
-      margin: 0;
-    }
-    canvas {
-      display: block;
-    }
-  </style>
-</head>
-<body>
-  <script type="module">
-
-async function readFile(fileName) {
-  const response = await fetch(fileName);
-  return new Uint8ClampedArray(await response.arrayBuffer());
-}
-
-const palettes = await (async function() {
-  const paletteData = await readFile("PALETTES.DAT");
-  const additionalPaletteData = new Uint8ClampedArray([
-    0x02, 0x03, 0x05, 0x00, 0x0D, 0x0A, 0x04, 0x0C, 0x02, 0x06, 0x06, 0x02, 0x03, 0x09, 0x09, 0x03,
-    0x0B, 0x08, 0x03, 0x06, 0x02, 0x07, 0x07, 0x0A, 0x08, 0x06, 0x0D, 0x09, 0x06, 0x04, 0x0B, 0x01,
-    0x09, 0x01, 0x00, 0x04, 0x0B, 0x01, 0x00, 0x04, 0x0D, 0x01, 0x00, 0x0C, 0x0F, 0x01, 0x00, 0x0C,
-    0x0F, 0x06, 0x04, 0x0C, 0x02, 0x05, 0x06, 0x08, 0x0F, 0x0C, 0x06, 0x0E, 0x0C, 0x0C, 0x0D, 0x0E,
-    0x00, 0x00, 0x00, 0x00, 0x0F, 0x0F, 0x0F, 0x0F, 0x08, 0x08, 0x08, 0x08, 0x0A, 0x0A, 0x0A, 0x07,
-    0x0A, 0x0A, 0x0A, 0x07, 0x0B, 0x0B, 0x0B, 0x07, 0x0E, 0x01, 0x01, 0x04, 0x09, 0x09, 0x09, 0x07,
-    0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x09, 0x00, 0x00, 0x04, 0x0B, 0x00, 0x00, 0x0C,
-    0x08, 0x08, 0x08, 0x08, 0x05, 0x05, 0x05, 0x08, 0x06, 0x06, 0x06, 0x08, 0x08, 0x08, 0x08, 0x08,
-    0x00, 0x00, 0x00, 0x00, 0x0F, 0x0F, 0x0F, 0x0F, 0x06, 0x06, 0x06, 0x08, 0x0A, 0x0A, 0x0A, 0x07,
-    0x0A, 0x0A, 0x0A, 0x07, 0x0B, 0x0B, 0x0B, 0x07, 0x0E, 0x01, 0x01, 0x04, 0x09, 0x09, 0x09, 0x07,
-    0x01, 0x03, 0x07, 0x00, 0x08, 0x08, 0x08, 0x08, 0x09, 0x00, 0x00, 0x04, 0x0B, 0x00, 0x00, 0x0C,
-    0x00, 0x02, 0x0A, 0x01, 0x05, 0x05, 0x05, 0x08, 0x06, 0x06, 0x06, 0x08, 0x08, 0x08, 0x08, 0x07,
-  ]);
-  let result = [[], [], [], [], [], [], []];
-  for (let n = 0; n < result.length; n++) {
-    for (let c = 0; c < 16; c++) {
-      if (n < 4) {
-        result[n][c] = {
-          r: paletteData[c*4 + n*64 + 0] << 4,
-          g: paletteData[c*4 + n*64 + 1] << 4,
-          b: paletteData[c*4 + n*64 + 2] << 4,
-          a: paletteData[c*4 + n*64 + 3] << 4,
-        }
-      } else {
-        result[n][c] = {
-          r: additionalPaletteData[c*4 + (n-4)*64 + 0] << 4,
-          g: additionalPaletteData[c*4 + (n-4)*64 + 1] << 4,
-          b: additionalPaletteData[c*4 + (n-4)*64 + 2] << 4,
-          a: additionalPaletteData[c*4 + (n-4)*64 + 3] << 4,
-        }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      body {
+        background-color: black;
+        margin: 0;
       }
-    }
-  }
-  return result;
-})();
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      async function readFile(fileName) {
+        const response = await fetch(fileName);
+        return new Uint8ClampedArray(await response.arrayBuffer());
+      }
 
+      const palettes = await (async function () {
+        const paletteData = await readFile("PALETTES.DAT");
+        const additionalPaletteData = new Uint8ClampedArray([
+          0x02, 0x03, 0x05, 0x00, 0x0d, 0x0a, 0x04, 0x0c, 0x02, 0x06, 0x06,
+          0x02, 0x03, 0x09, 0x09, 0x03, 0x0b, 0x08, 0x03, 0x06, 0x02, 0x07,
+          0x07, 0x0a, 0x08, 0x06, 0x0d, 0x09, 0x06, 0x04, 0x0b, 0x01, 0x09,
+          0x01, 0x00, 0x04, 0x0b, 0x01, 0x00, 0x04, 0x0d, 0x01, 0x00, 0x0c,
+          0x0f, 0x01, 0x00, 0x0c, 0x0f, 0x06, 0x04, 0x0c, 0x02, 0x05, 0x06,
+          0x08, 0x0f, 0x0c, 0x06, 0x0e, 0x0c, 0x0c, 0x0d, 0x0e, 0x00, 0x00,
+          0x00, 0x00, 0x0f, 0x0f, 0x0f, 0x0f, 0x08, 0x08, 0x08, 0x08, 0x0a,
+          0x0a, 0x0a, 0x07, 0x0a, 0x0a, 0x0a, 0x07, 0x0b, 0x0b, 0x0b, 0x07,
+          0x0e, 0x01, 0x01, 0x04, 0x09, 0x09, 0x09, 0x07, 0x08, 0x08, 0x08,
+          0x08, 0x08, 0x08, 0x08, 0x08, 0x09, 0x00, 0x00, 0x04, 0x0b, 0x00,
+          0x00, 0x0c, 0x08, 0x08, 0x08, 0x08, 0x05, 0x05, 0x05, 0x08, 0x06,
+          0x06, 0x06, 0x08, 0x08, 0x08, 0x08, 0x08, 0x00, 0x00, 0x00, 0x00,
+          0x0f, 0x0f, 0x0f, 0x0f, 0x06, 0x06, 0x06, 0x08, 0x0a, 0x0a, 0x0a,
+          0x07, 0x0a, 0x0a, 0x0a, 0x07, 0x0b, 0x0b, 0x0b, 0x07, 0x0e, 0x01,
+          0x01, 0x04, 0x09, 0x09, 0x09, 0x07, 0x01, 0x03, 0x07, 0x00, 0x08,
+          0x08, 0x08, 0x08, 0x09, 0x00, 0x00, 0x04, 0x0b, 0x00, 0x00, 0x0c,
+          0x00, 0x02, 0x0a, 0x01, 0x05, 0x05, 0x05, 0x08, 0x06, 0x06, 0x06,
+          0x08, 0x08, 0x08, 0x08, 0x07,
+        ]);
+        let result = [[], [], [], [], [], [], []];
+        for (let n = 0; n < result.length; n++) {
+          for (let c = 0; c < 16; c++) {
+            if (n < 4) {
+              result[n][c] = {
+                r: paletteData[c * 4 + n * 64 + 0] << 4,
+                g: paletteData[c * 4 + n * 64 + 1] << 4,
+                b: paletteData[c * 4 + n * 64 + 2] << 4,
+                a: paletteData[c * 4 + n * 64 + 3] << 4,
+              };
+            } else {
+              result[n][c] = {
+                r: additionalPaletteData[c * 4 + (n - 4) * 64 + 0] << 4,
+                g: additionalPaletteData[c * 4 + (n - 4) * 64 + 1] << 4,
+                b: additionalPaletteData[c * 4 + (n - 4) * 64 + 2] << 4,
+                a: additionalPaletteData[c * 4 + (n - 4) * 64 + 3] << 4,
+              };
+            }
+          }
+        }
+        return result;
+      })();
 
-async function drawBitmap(fileName, width, height, palette, mixN=0) {
-  const canvas = document.createElement("CANVAS");
-  canvas.setAttribute("width", width);
-  canvas.setAttribute("height", height);
-  canvas.style.imageRendering = "pixelated";
-  canvas.style.width = (width*4)+"px";
-  canvas.style.height = (height*4)+"px";
-  const ctx = canvas.getContext("2d");
+      async function drawBitmap(fileName, width, height, palette, mixN = 0) {
+        const canvas = document.createElement("CANVAS");
+        canvas.setAttribute("width", width);
+        canvas.setAttribute("height", height);
+        canvas.style.imageRendering = "pixelated";
+        canvas.style.width = width * 4 + "px";
+        canvas.style.height = height * 4 + "px";
+        const ctx = canvas.getContext("2d");
 
-  const pixelBuffer = new Uint8ClampedArray(width * height * 4);
-  const bitmapData = await readFile(fileName);
-  for (let y=0; y<height; y++) {
-    for (let x=0; x<width; x++) {
-      let sourcePixelAddress = y * width / 2 + Math.floor(x / 8);
-      let sourcePixelBitPosition = 7 - (x % 8);
-      let destPixelAddress = (y * width + x) * 4;
-      let b = (bitmapData[sourcePixelAddress + 0] >> sourcePixelBitPosition) & 0x1;
-      let g = (bitmapData[sourcePixelAddress + 80] >> sourcePixelBitPosition) & 0x1;
-      let r = (bitmapData[sourcePixelAddress + 160] >> sourcePixelBitPosition) & 0x1;
-      let i = (bitmapData[sourcePixelAddress + 240] >> sourcePixelBitPosition) & 0x1;
-      let colorIndex = ((b << 0) | (g << 1) | (r << 2) | (i << 3));
-      let color = palette[colorIndex];
-      pixelBuffer[destPixelAddress + 0] = color.r;
-      pixelBuffer[destPixelAddress + 1] = color.g;
-      pixelBuffer[destPixelAddress + 2] = color.b;
-      pixelBuffer[destPixelAddress + 3] = 255;
-    }
-  }
-  ctx.putImageData(new ImageData(pixelBuffer, width, height), 0, 0);
-  document.body.appendChild(canvas);
-}
+        const pixelBuffer = new Uint8ClampedArray(width * height * 4);
+        const bitmapData = await readFile(fileName);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            let sourcePixelAddress = (y * width) / 2 + Math.floor(x / 8);
+            let sourcePixelBitPosition = 7 - (x % 8);
+            let destPixelAddress = (y * width + x) * 4;
+            let b =
+              (bitmapData[sourcePixelAddress + 0] >> sourcePixelBitPosition) &
+              0x1;
+            let g =
+              (bitmapData[sourcePixelAddress + 80] >> sourcePixelBitPosition) &
+              0x1;
+            let r =
+              (bitmapData[sourcePixelAddress + 160] >> sourcePixelBitPosition) &
+              0x1;
+            let i =
+              (bitmapData[sourcePixelAddress + 240] >> sourcePixelBitPosition) &
+              0x1;
+            let colorIndex = (b << 0) | (g << 1) | (r << 2) | (i << 3);
+            let color = palette[colorIndex];
+            pixelBuffer[destPixelAddress + 0] = color.r;
+            pixelBuffer[destPixelAddress + 1] = color.g;
+            pixelBuffer[destPixelAddress + 2] = color.b;
+            pixelBuffer[destPixelAddress + 3] = 255;
+          }
+        }
+        ctx.putImageData(new ImageData(pixelBuffer, width, height), 0, 0);
+        document.body.appendChild(canvas);
+      }
 
-async function drawBitmap2(fileName, width, height, palette, mixN=0) {
-  const canvas = document.createElement("CANVAS");
-  canvas.setAttribute("width", width);
-  canvas.setAttribute("height", height);
-  canvas.style.imageRendering = "pixelated";
-  canvas.style.width = (width*4)+"px";
-  canvas.style.height = (height*4)+"px";
-  const ctx = canvas.getContext("2d");
+      async function drawBitmap2(fileName, width, height, palette, mixN = 0) {
+        const canvas = document.createElement("CANVAS");
+        canvas.setAttribute("width", width);
+        canvas.setAttribute("height", height);
+        canvas.style.imageRendering = "pixelated";
+        canvas.style.width = width * 4 + "px";
+        canvas.style.height = height * 4 + "px";
+        const ctx = canvas.getContext("2d");
 
-  const pixelBuffer = new Uint8ClampedArray(width * height * 4);
-  const bitmapData = await readFile(fileName);
-  for (let y=0; y<height; y++) {
-    for (let x=0; x<width; x++) {
-      let sourcePixelAddress = y * width / 2 + Math.floor(x / 8);
-      let sourcePixelBitPosition = 7 - (x % 8);
-      let destPixelAddress = (y * width + x) * 4;
-      let b = (bitmapData[sourcePixelAddress + 0] >> sourcePixelBitPosition) & 0x1;
-      let g = (bitmapData[sourcePixelAddress + 40] >> sourcePixelBitPosition) & 0x1;
-      let r = (bitmapData[sourcePixelAddress + 80] >> sourcePixelBitPosition) & 0x1;
-      let i = (bitmapData[sourcePixelAddress + 120] >> sourcePixelBitPosition) & 0x1;
-      let colorIndex = ((b << 0) | (g << 1) | (r << 2) | (i << 3));
-      let color = palette[colorIndex];
-      pixelBuffer[destPixelAddress + 0] = color.r;
-      pixelBuffer[destPixelAddress + 1] = color.g;
-      pixelBuffer[destPixelAddress + 2] = color.b;
-      pixelBuffer[destPixelAddress + 3] = 255;
-    }
-  }
-  ctx.putImageData(new ImageData(pixelBuffer, width, height), 0, 0);
-  document.body.appendChild(canvas);
-}
+        const pixelBuffer = new Uint8ClampedArray(width * height * 4);
+        const bitmapData = await readFile(fileName);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            let sourcePixelAddress = (y * width) / 2 + Math.floor(x / 8);
+            let sourcePixelBitPosition = 7 - (x % 8);
+            let destPixelAddress = (y * width + x) * 4;
+            let b =
+              (bitmapData[sourcePixelAddress + 0] >> sourcePixelBitPosition) &
+              0x1;
+            let g =
+              (bitmapData[sourcePixelAddress + 40] >> sourcePixelBitPosition) &
+              0x1;
+            let r =
+              (bitmapData[sourcePixelAddress + 80] >> sourcePixelBitPosition) &
+              0x1;
+            let i =
+              (bitmapData[sourcePixelAddress + 120] >> sourcePixelBitPosition) &
+              0x1;
+            let colorIndex = (b << 0) | (g << 1) | (r << 2) | (i << 3);
+            let color = palette[colorIndex];
+            pixelBuffer[destPixelAddress + 0] = color.r;
+            pixelBuffer[destPixelAddress + 1] = color.g;
+            pixelBuffer[destPixelAddress + 2] = color.b;
+            pixelBuffer[destPixelAddress + 3] = 255;
+          }
+        }
+        ctx.putImageData(new ImageData(pixelBuffer, width, height), 0, 0);
+        document.body.appendChild(canvas);
+      }
 
-await drawBitmap("FIXED.DAT", 640, 16, palettes[1]);
-await drawBitmap2("MOVING.DAT", 320, 462, palettes[1]);
-await drawBitmap2("PANEL.DAT", 320, 24, palettes[1]);
-await drawBitmap2("MENU.DAT", 320, 200, palettes[1]);
-await drawBitmap2("CONTROLS.DAT", 320, 200, palettes[2]);
-await drawBitmap2("TITLE.DAT", 320, 200, palettes[4]);
-await drawBitmap2("TITLE1.DAT", 320, 200, palettes[5]);
-await drawBitmap2("TITLE2.DAT", 320, 200, palettes[6]);
-await drawBitmap2("GFX.DAT", 320, 200, palettes[1]);
-await drawBitmap2("BACK.DAT", 320, 200, palettes[0]);
-    
-  </script>
-</body>
+      async function drawChars(fileName) {
+        const width = 512,
+          height = 8;
+        const canvas = document.createElement("CANVAS");
+        canvas.setAttribute("width", width);
+        canvas.setAttribute("height", height);
+        canvas.style.imageRendering = "pixelated";
+        canvas.style.width = width * 4 + "px";
+        canvas.style.height = height * 4 + "px";
+        const ctx = canvas.getContext("2d");
+
+        const pixelBuffer = new Uint8ClampedArray(width * height * 4);
+        const bitmapData = await readFile(fileName);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            let addr = y * width + x;
+            let byte = bitmapData[Math.floor(addr / 8)];
+            let color = 255 * (byte & (1 << (7 - (addr % 8))));
+            pixelBuffer[addr * 4 + 0] = color;
+            pixelBuffer[addr * 4 + 1] = color;
+            pixelBuffer[addr * 4 + 2] = color;
+            pixelBuffer[addr * 4 + 3] = 255;
+          }
+        }
+        ctx.putImageData(new ImageData(pixelBuffer, width, height), 0, 0);
+        document.body.appendChild(canvas);
+      }
+
+      await drawChars("CHARS6.DAT");
+      await drawChars("CHARS8.DAT");
+      await drawBitmap("FIXED.DAT", 640, 16, palettes[1]);
+      await drawBitmap2("MOVING.DAT", 320, 462, palettes[1]);
+      await drawBitmap2("PANEL.DAT", 320, 24, palettes[1]);
+      await drawBitmap2("MENU.DAT", 320, 200, palettes[1]);
+      await drawBitmap2("CONTROLS.DAT", 320, 200, palettes[2]);
+      await drawBitmap2("TITLE.DAT", 320, 200, palettes[4]);
+      await drawBitmap2("TITLE1.DAT", 320, 200, palettes[5]);
+      await drawBitmap2("TITLE2.DAT", 320, 200, palettes[6]);
+      await drawBitmap2("GFX.DAT", 320, 200, palettes[1]);
+      await drawBitmap2("BACK.DAT", 320, 200, palettes[0]);
+    </script>
+  </body>
 </html>
